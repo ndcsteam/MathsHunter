@@ -34,42 +34,24 @@
     </script>
 
     <div class="container mx-auto px-4 py-8">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-primary">Microbit 數學遊戲</h1>
-            <p class="mt-2 text-gray-600 dark:text-gray-400">使用Microbit裝置回答數學問題</p>
+        <header class="mb-8">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="text-center">
+                    <h1 class="text-3xl font-bold text-primary">Microbit 數學遊戲</h1>
+                    <p class="mt-2 text-gray-600 dark:text-gray-400">使用Microbit裝置回答數學問題</p>
+                </div>
+                <button id="connect-button" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition">
+                    連接 Microbit
+                </button>
+            </div>
+
         </header>
 
         <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <!-- 連接區域 -->
-            <div id="connection-section" class="mb-6">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <h2 class="text-xl font-semibold">1. 連接你的Microbit</h2>
-                    <button id="connect-button" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition">
-                        連接 Microbit
-                    </button>
-                </div>
-                <div id="connection-status" class="mt-2 text-gray-600 dark:text-gray-400">
-                    未連接 - 請點擊上方按鈕連接Microbit接收器
-                </div>
-            </div>
-
-            <!-- 遊戲說明 -->
-            <div class="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <h2 class="text-xl font-semibold mb-2">遊戲說明</h2>
-                <ol class="list-decimal pl-5 space-y-1">
-                    <li>連接你的Microbit接收器</li>
-                    <li>點擊「開始遊戲」按鈕開始遊戲</li>
-                    <li>閱讀數學問題，思考正確答案</li>
-                    <li>使用外置遊戲裝置發送A、B、C或D來選擇答案</li>
-                    <li>答對得1分，答錯不扣分</li>
-                    <li>看看你能獲得多少分！</li>
-                </ol>
-            </div>
-
             <!-- 遊戲區域 -->
             <div id="game-section" class="opacity-50 pointer-events-none">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold">2. 玩遊戲</h2>
+                    <h2 class="text-xl font-semibold">玩遊戲</h2>
                     <div class="flex items-center space-x-4">
                         <div class="text-right">
                             <span class="text-gray-600 dark:text-gray-400">得分：</span>
@@ -126,15 +108,7 @@
             </div>
         </div>
 
-        <div id="test-controls" class="max-w-3xl mx-auto mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-            <h3 class="font-semibold mb-3">測試模式 (無Microbit時使用)</h3>
-            <div class="flex flex-wrap gap-2 justify-center">
-                <button class="test-button px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition" data-option="A">A</button>
-                <button class="test-button px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition" data-option="B">B</button>
-                <button class="test-button px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition" data-option="C">C</button>
-                <button class="test-button px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition" data-option="D">D</button>
-            </div>
-        </div>
+
     </div>
 
     <script>
@@ -149,7 +123,7 @@
 
         // DOM元素
         const connectButton = document.getElementById('connect-button');
-        const connectionStatus = document.getElementById('connection-status');
+
         const startButton = document.getElementById('start-button');
         const scoreDisplay = document.getElementById('score');
         const questionText = document.getElementById('question-text');
@@ -159,8 +133,6 @@
         const answerD = document.getElementById('answer-d');
         const gameSection = document.getElementById('game-section');
         const feedback = document.getElementById('feedback');
-        const testButtons = document.querySelectorAll('.test-button');
-
         // 連接到Microbit
         connectButton.addEventListener('click', async () => {
             try {
@@ -217,12 +189,16 @@
             }
         }
 
-        // 更新連接狀態
+        // 更新連接狀態（通過console log）
         function updateConnectionStatus(message, isError) {
-            connectionStatus.textContent = message;
-            connectionStatus.className = isError 
-                ? 'mt-2 text-red-600 dark:text-red-400' 
-                : 'mt-2 text-green-600 dark:text-green-400';
+            const statusType = isError ? 'error' : 'info';
+            const statusPrefix = isError ? '錯誤: ' : '狀態: ';
+            
+            if (isError) {
+                console.error(statusPrefix + message);
+            } else {
+                console.log(statusPrefix + message);
+            }
         }
 
         // 開始遊戲
@@ -336,13 +312,7 @@
             }, 1500);
         }
 
-        // 測試按鈕 (無Microbit時使用)
-        testButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const option = button.getAttribute('data-option');
-                processAnswer(option);
-            });
-        });
+
     </script>
 </body>
 </html>
