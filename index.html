@@ -54,17 +54,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700&display=swap');
 
-        /* 自定義CSS變量 */
-        :root {
-            --target-outer: #F87171;
-            --target-inner: #FECACA;
-        }
-
-        .dark {
-            --target-outer: #991B1B;
-            --target-inner: #7F1D1D;
-        }
-
         body {
             font-family: 'Baloo 2', cursive, system-ui, sans-serif;
             background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.08"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
@@ -72,34 +61,6 @@
 
         .dark body {
             background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
-        }
-
-        /* 靶心設計 */
-        .target-ring {
-            border-radius: 50%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-
-        .target-ring::before {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            border: 3px dashed var(--target-outer);
-            border-radius: 50%;
-            animation: spin 20s linear infinite;
-            opacity: 0.5;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         /* 答案選項動畫 */
@@ -229,6 +190,87 @@
             right: -0.5rem;
             bottom: -1.5rem;
         }
+
+        /* 慶祝動畫 */
+        @keyframes celebrate {
+            0% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+
+        .celebration-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            overflow: hidden;
+            display: none;
+        }
+
+        .celebration-active {
+            display: block;
+        }
+
+        .celebration-particle {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            animation: celebrate 1s ease-out forwards;
+        }
+
+        /* 打氣動畫 */
+        @keyframes encourage-wave {
+            0%, 100% { transform: translateY(0); }
+            25% { transform: translateY(-15px); }
+            75% { transform: translateY(10px); }
+        }
+
+        @keyframes encourage-fade {
+            0% { opacity: 0; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+
+        .encouragement-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+        }
+
+        .encouragement-active {
+            display: flex;
+        }
+
+        .encouragement-message {
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-align: center;
+            color: #3730A3;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: encourage-fade 1.5s ease-in-out forwards;
+        }
+
+        .encouragement-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            animation: encourage-wave 0.7s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="bg-orange-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
@@ -245,6 +287,17 @@
             }
         });
     </script>
+
+    <!-- 慶祝動畫容器 -->
+    <div id="celebration-container" class="celebration-container"></div>
+    
+    <!-- 打氣動畫容器 -->
+    <div id="encouragement-container" class="encouragement-container">
+        <div class="encouragement-message">
+            <div class="encouragement-icon">💪</div>
+            <div>加油！再試一次！</div>
+        </div>
+    </div>
 
     <div class="container mx-auto px-4 py-6">
         <header class="mb-8">
@@ -288,12 +341,6 @@
 
                 <!-- 問題展示區 - 獵場 -->
                 <div id="question-container" class="p-8 bg-gradient-to-br from-amber-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 rounded-xl mb-6 shadow-inner border border-amber-200 dark:border-gray-700">
-                    <div class="target-ring w-24 h-24 mx-auto mb-4 bg-white dark:bg-gray-700 border-8 border-red-400 dark:border-red-800">
-                        <div class="w-16 h-16 bg-red-300 dark:bg-red-900 rounded-full flex items-center justify-center">
-                            <i class="fas fa-bullseye text-red-600 dark:text-red-400 text-2xl"></i>
-                        </div>
-                    </div>
-
                     <div id="question-text" class="text-3xl font-bold text-center mb-8 py-3 px-6 bg-white dark:bg-gray-800 rounded-xl shadow-md inline-block mx-auto animate-float">
                         準備好後點擊「開始挑戰」按鈕
                     </div>
@@ -367,7 +414,8 @@
         const gameSection = document.getElementById('game-section');
         const feedback = document.getElementById('feedback');
         const feedbackText = document.getElementById('feedback-text');
-        const targetRing = document.querySelector('.target-ring');
+        const celebrationContainer = document.getElementById('celebration-container');
+        const encouragementContainer = document.getElementById('encouragement-container');
 
         // 連接到Microbit
         connectButton.addEventListener('click', async () => {
@@ -451,6 +499,94 @@
             startButton.innerHTML = '<i class="fas fa-forward mr-2"></i><span>下一題</span>';
             generateQuestion();
         });
+
+        // 慶祝動畫
+        function playCelebrationAnimation() {
+            celebrationContainer.innerHTML = ''; // 清空之前的粒子
+            celebrationContainer.classList.add('celebration-active');
+            
+            // 創建彩色粒子
+            const colors = [
+                '#10B981', // 綠色
+                '#3B82F6', // 藍色
+                '#F59E0B', // 琥珀色
+                '#EC4899', // 粉紅色
+                '#8B5CF6', // 紫色
+                '#F43F5E', // 紅色
+                '#FBBF24'  // 黃色
+            ];
+            
+            const particleCount = 60; // 粒子數量
+            
+            for (let i = 0; i < particleCount; i++) {
+                // 創建粒子元素
+                const particle = document.createElement('div');
+                particle.classList.add('celebration-particle');
+                
+                // 隨機位置
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * window.innerHeight;
+                
+                // 隨機大小
+                const size = Math.random() * 10 + 8;
+                
+                // 隨機顏色
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                // 隨機延遲
+                const delay = Math.random() * 1.5;
+                
+                // 設置樣式
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.backgroundColor = color;
+                particle.style.animationDelay = `${delay}s`;
+                
+                // 添加到容器
+                celebrationContainer.appendChild(particle);
+            }
+            
+            // 一段時間後移除動畫
+            setTimeout(() => {
+                celebrationContainer.classList.remove('celebration-active');
+            }, 2500);
+        }
+
+        // 打氣動畫
+        function playEncouragementAnimation() {
+            encouragementContainer.classList.add('encouragement-active');
+            
+            // 隨機鼓勵短語
+            const messages = [
+                '加油！再試一次！',
+                '別放棄！你能做到！',
+                '下一題會更好！',
+                '繼續努力！'
+            ];
+            
+            // 隨機表情符號
+            const emojis = ['💪', '🔥', '✨', '📚', '🧠'];
+            
+            // 隨機選擇一條訊息和表情符號
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+            
+            // 更新內容
+            const messageElement = encouragementContainer.querySelector('.encouragement-message div:last-child');
+            const emojiElement = encouragementContainer.querySelector('.encouragement-icon');
+            
+            if (messageElement && emojiElement) {
+                messageElement.textContent = message;
+                emojiElement.textContent = emoji;
+            }
+            
+            // 一段時間後移除動畫
+            setTimeout(() => {
+                encouragementContainer.classList.remove('encouragement-active');
+            }, 1500);
+        }
 
         // 題目類別與生成
         const questionTypes = [
@@ -1158,12 +1294,6 @@
                 selectedOptionElement.classList.remove('hit-animation');
             }, 500);
             
-            // 添加靶心動畫
-            targetRing.classList.add('hit-animation');
-            setTimeout(() => {
-                targetRing.classList.remove('hit-animation');
-            }, 500);
-            
             // 顯示反饋
             feedbackText.textContent = isCorrect 
                 ? '✓ 正中目標！' 
@@ -1176,8 +1306,14 @@
             // 添加反饋圖標
             if (isCorrect) {
                 feedbackText.innerHTML = `<i class="fas fa-bullseye mr-2"></i> 正中目標！`;
+                
+                // 播放慶祝動畫
+                playCelebrationAnimation();
             } else {
                 feedbackText.innerHTML = `<i class="fas fa-times-circle mr-2"></i> 射偏了！正確答案是: ${currentQuestion.correctOption}`;
+                
+                // 播放打氣動畫
+                playEncouragementAnimation();
             }
                 
             // 更新分數並添加動畫
