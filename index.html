@@ -203,6 +203,32 @@
             transform: scaleX(1);
             transform-origin: left;
         }
+
+        /* 文字題格式 */
+        .word-problem {
+            line-height: 1.6;
+            position: relative;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .word-problem::before {
+            content: '"';
+            font-size: 2.5rem;
+            color: rgba(209, 213, 219, 0.5);
+            position: absolute;
+            left: -0.5rem;
+            top: -1rem;
+        }
+
+        .word-problem::after {
+            content: '"';
+            font-size: 2.5rem;
+            color: rgba(209, 213, 219, 0.5);
+            position: absolute;
+            right: -0.5rem;
+            bottom: -1.5rem;
+        }
     </style>
 </head>
 <body class="bg-orange-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
@@ -426,72 +452,639 @@
             generateQuestion();
         });
 
-        // 生成數學問題
+        // 題目類別與生成
+        const questionTypes = [
+            // 0. 基本四則運算(較簡單)
+            {
+                name: "基本運算",
+                icon: "calculator",
+                generator: function() {
+                    const operations = ['+', '-', '×', '÷'];
+                    const op = operations[Math.floor(Math.random() * 4)];
+                    
+                    let num1, num2, answer, question;
+                    
+                    switch(op) {
+                        case '+': // 加法
+                            num1 = Math.floor(Math.random() * 50) + 1;
+                            num2 = Math.floor(Math.random() * 50) + 1;
+                            answer = num1 + num2;
+                            question = `${num1} + ${num2} = ?`;
+                            break;
+                            
+                        case '-': // 減法(確保結果為正數)
+                            num1 = Math.floor(Math.random() * 50) + 51; // 51-100
+                            num2 = Math.floor(Math.random() * 50) + 1;  // 1-50
+                            answer = num1 - num2;
+                            question = `${num1} - ${num2} = ?`;
+                            break;
+                            
+                        case '×': // 乘法
+                            num1 = Math.floor(Math.random() * 10) + 1;
+                            num2 = Math.floor(Math.random() * 10) + 1;
+                            answer = num1 * num2;
+                            question = `${num1} × ${num2} = ?`;
+                            break;
+                            
+                        case '÷': // 除法(確保能整除)
+                            num2 = Math.floor(Math.random() * 10) + 1; // 除數 1-10
+                            answer = Math.floor(Math.random() * 10) + 1; // 商 1-10
+                            num1 = num2 * answer; // 被除數
+                            question = `${num1} ÷ ${num2} = ?`;
+                            break;
+                    }
+                    
+                    return { question, answer };
+                }
+            },
+            
+            // 1. 高階計算(較複雜)
+            {
+                name: "進階運算",
+                icon: "square-root-variable",
+                generator: function() {
+                    const subTypes = ['混合運算', '分數', '小數'];
+                    const subType = subTypes[Math.floor(Math.random() * subTypes.length)];
+                    
+                    let question, answer;
+                    
+                    switch(subType) {
+                        case '混合運算':
+                            // 生成兩步運算，如 3x4+5 或 20÷4-2
+                            const ops = ['+', '-'];
+                            const op = ops[Math.floor(Math.random() * ops.length)];
+                            
+                            // 先算乘/除部分
+                            let num1, num2, num3, midResult;
+                            
+                            if (Math.random() < 0.5) { // 乘法優先
+                                num1 = Math.floor(Math.random() * 10) + 1; // 1-10
+                                num2 = Math.floor(Math.random() * 10) + 1; // 1-10
+                                midResult = num1 * num2;
+                                
+                                if (op === '+') {
+                                    num3 = Math.floor(Math.random() * 20) + 1; // 1-20
+                                    answer = midResult + num3;
+                                    question = `${num1} × ${num2} + ${num3} = ?`;
+                                } else {
+                                    num3 = Math.floor(Math.random() * midResult) + 1; // 確保結果為正
+                                    answer = midResult - num3;
+                                    question = `${num1} × ${num2} - ${num3} = ?`;
+                                }
+                            } else { // 除法優先
+                                num2 = Math.floor(Math.random() * 9) + 2; // 除數 2-10
+                                answer = Math.floor(Math.random() * 9) + 1; // 商 1-9
+                                
+                                if (op === '+') {
+                                    num3 = Math.floor(Math.random() * 20) + 1; // 1-20
+                                    midResult = answer - num3; // 先算出中間結果，確保最終答案為整數
+                                    num1 = midResult * num2; // 被除數
+                                    answer = midResult + num3;
+                                    question = `${num1} ÷ ${num2} + ${num3} = ?`;
+                                } else {
+                                    num3 = Math.floor(Math.random() * 10) + 1; // 1-10
+                                    midResult = answer + num3; // 先算出中間結果，確保最終答案為整數
+                                    num1 = midResult * num2; // 被除數
+                                    answer = midResult - num3;
+                                    question = `${num1} ÷ ${num2} - ${num3} = ?`;
+                                }
+                            }
+                            break;
+                            
+                        case '分數':
+                            // 簡單分數加減法，使用相同分母
+                            const denominator = Math.floor(Math.random() * 8) + 2; // 分母 2-9
+                            const numer1 = Math.floor(Math.random() * (denominator - 1)) + 1; // 分子1
+                            let numer2;
+                            
+                            if (Math.random() < 0.5) { // 加法
+                                numer2 = Math.floor(Math.random() * (denominator - 1)) + 1; // 分子2
+                                answer = numer1 + numer2;
+                                // 檢查是否需要化簡
+                                if (answer > denominator) {
+                                    const whole = Math.floor(answer / denominator);
+                                    const remainder = answer % denominator;
+                                    if (remainder === 0) {
+                                        answer = whole;
+                                        question = `\\(\\frac{${numer1}}{${denominator}} + \\frac{${numer2}}{${denominator}} = ?\\)`;
+                                    } else {
+                                        answer = `${whole}又${remainder}/${denominator}`;
+                                        question = `\\(\\frac{${numer1}}{${denominator}} + \\frac{${numer2}}{${denominator}} = ?\\)`;
+                                    }
+                                } else {
+                                    answer = `${answer}/${denominator}`;
+                                    question = `\\(\\frac{${numer1}}{${denominator}} + \\frac{${numer2}}{${denominator}} = ?\\)`;
+                                }
+                            } else { // 減法，確保結果為正
+                                numer2 = Math.floor(Math.random() * numer1) + 1; // 確保 numer1 > numer2
+                                answer = numer1 - numer2;
+                                answer = `${answer}/${denominator}`;
+                                question = `\\(\\frac{${numer1}}{${denominator}} - \\frac{${numer2}}{${denominator}} = ?\\)`;
+                            }
+                            
+                            // 將數學符號轉換為顯示格式
+                            question = `<span class="text-2xl">
+                                          ${numer1}/${denominator} ${Math.random() < 0.5 ? '+' : '-'} ${numer2}/${denominator} = ?
+                                        </span>`;
+                            break;
+                            
+                        case '小數':
+                            // 一位小數加減法
+                            const int1 = Math.floor(Math.random() * 20) + 1; // 整數部分 1-20
+                            const dec1 = Math.floor(Math.random() * 10); // 小數部分 0-9
+                            const int2 = Math.floor(Math.random() * 20) + 1; // 整數部分 1-20
+                            const dec2 = Math.floor(Math.random() * 10); // 小數部分 0-9
+                            
+                            const decNum1 = int1 + dec1/10;
+                            const decNum2 = int2 + dec2/10;
+                            
+                            if (Math.random() < 0.5) { // 加法
+                                answer = (decNum1 + decNum2).toFixed(1);
+                                answer = parseFloat(answer); // 移除不必要的零
+                                question = `${decNum1.toFixed(1)} + ${decNum2.toFixed(1)} = ?`;
+                            } else { // 減法，確保結果為正
+                                if (decNum1 >= decNum2) {
+                                    answer = (decNum1 - decNum2).toFixed(1);
+                                    answer = parseFloat(answer); // 移除不必要的零
+                                    question = `${decNum1.toFixed(1)} - ${decNum2.toFixed(1)} = ?`;
+                                } else {
+                                    answer = (decNum2 - decNum1).toFixed(1);
+                                    answer = parseFloat(answer); // 移除不必要的零
+                                    question = `${decNum2.toFixed(1)} - ${decNum1.toFixed(1)} = ?`;
+                                }
+                            }
+                            break;
+                    }
+                    
+                    return { question, answer };
+                }
+            },
+            
+            // 2. 簡單應用題
+            {
+                name: "日常應用",
+                icon: "person-walking",
+                generator: function() {
+                    const topics = [
+                        '購物計算', 
+                        '時間問題', 
+                        '長度測量', 
+                        '重量計算',
+                        '速度問題'
+                    ];
+                    const topic = topics[Math.floor(Math.random() * topics.length)];
+                    
+                    let question, answer, story;
+                    
+                    switch(topic) {
+                        case '購物計算':
+                            // 生成購物情境題
+                            const items = ['鉛筆', '橡皮擦', '記事本', '鋼筆', '水彩筆', '書包', '尺', '文具盒'];
+                            const item1 = items[Math.floor(Math.random() * items.length)];
+                            let item2;
+                            do {
+                                item2 = items[Math.floor(Math.random() * items.length)];
+                            } while (item2 === item1);
+                            
+                            const price1 = Math.floor(Math.random() * 20) + 5; // 5-24元
+                            const price2 = Math.floor(Math.random() * 30) + 10; // 10-39元
+                            const quantity1 = Math.floor(Math.random() * 5) + 1; // 1-5個
+                            const quantity2 = Math.floor(Math.random() * 5) + 1; // 1-5個
+                            
+                            const total = price1 * quantity1 + price2 * quantity2;
+                            const money = Math.ceil(total / 10) * 10 + Math.floor(Math.random() * 5) * 10; // 確保足夠找零
+                            const change = money - total;
+                            
+                            const questionTypes = ['total', 'change'];
+                            const questionType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+                            
+                            story = `小明去文具店買了${quantity1}支${item1}，每支${price1}元，和${quantity2}個${item2}，每個${price2}元。`;
+                            
+                            if (questionType === 'total') {
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>小明一共需要付多少錢？</div>`;
+                                answer = total;
+                            } else {
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}小明付了${money}元，應該找回多少錢？</div>`;
+                                answer = change;
+                            }
+                            break;
+                            
+                        case '時間問題':
+                            // 生成時間計算題
+                            const hour1 = Math.floor(Math.random() * 12) + 1; // 1-12點
+                            const minute1 = Math.floor(Math.random() * 12) * 5; // 0, 5, 10, ..., 55分
+                            
+                            // 產生一個時間間隔，以分鐘計
+                            const interval = (Math.floor(Math.random() * 12) + 1) * 15; // 15, 30, 45, ..., 180分鐘
+                            
+                            // 計算結束時間
+                            let totalMinutes = hour1 * 60 + minute1 + interval;
+                            let hour2 = Math.floor(totalMinutes / 60);
+                            if (hour2 > 12) hour2 -= 12; // 使用12小時制
+                            if (hour2 === 0) hour2 = 12;
+                            const minute2 = totalMinutes % 60;
+                            
+                            const activities = ['看電影', '踢足球', '上數學課', '畫畫', '彈鋼琴', '玩電腦遊戲', '讀書'];
+                            const activity = activities[Math.floor(Math.random() * activities.length)];
+                            
+                            const minute1Str = minute1 < 10 ? `0${minute1}` : minute1;
+                            const minute2Str = minute2 < 10 ? `0${minute2}` : minute2;
+                            
+                            story = `小華在下午${hour1}:${minute1Str}開始${activity}，一直到${hour2}:${minute2Str}結束。`;
+                            question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>小華${activity}了多少分鐘？</div>`;
+                            answer = interval;
+                            break;
+                            
+                        case '長度測量':
+                            // 生成長度、距離計算題
+                            const lengths = [
+                                { unit: '公分', value: Math.floor(Math.random() * 50) + 20 }, // 20-69公分
+                                { unit: '公分', value: Math.floor(Math.random() * 30) + 10 }  // 10-39公分
+                            ];
+                            
+                            const objectTypes = ['繩子', '布條', '木板', '紙條'];
+                            const objectType = objectTypes[Math.floor(Math.random() * objectTypes.length)];
+                            
+                            if (Math.random() < 0.5) { // 加法
+                                story = `小芳有一條${lengths[0].value}${lengths[0].unit}長的${objectType}，小強有一條${lengths[1].value}${lengths[1].unit}長的${objectType}。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>如果把兩條${objectType}連接起來，總長度是多少${lengths[0].unit}？</div>`;
+                                answer = lengths[0].value + lengths[1].value;
+                            } else { // 減法
+                                const total = lengths[0].value + lengths[1].value;
+                                story = `小芳有一條${total}${lengths[0].unit}長的${objectType}，她剪下了${lengths[1].value}${lengths[1].unit}。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>剩下的${objectType}長度是多少${lengths[0].unit}？</div>`;
+                                answer = lengths[0].value;
+                            }
+                            break;
+                            
+                        case '重量計算':
+                            // 生成重量計算題
+                            const weights = [
+                                { unit: '公斤', value: Math.floor(Math.random() * 10) + 1 }, // 1-10公斤
+                                { unit: '公斤', value: Math.floor(Math.random() * 5) + 1 }   // 1-5公斤
+                            ];
+                            
+                            const fruitTypes = ['蘋果', '橘子', '香蕉', '西瓜', '鳳梨'];
+                            const fruitType = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
+                            
+                            if (Math.random() < 0.5) { // 乘法
+                                const quantity = Math.floor(Math.random() * 5) + 2; // 2-6個
+                                story = `一個${fruitType}的重量是${weights[0].value}${weights[0].unit}。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>${quantity}個${fruitType}的總重量是多少${weights[0].unit}？</div>`;
+                                answer = weights[0].value * quantity;
+                            } else { // 加法或減法
+                                if (Math.random() < 0.5) { // 加法
+                                    const fruit2Types = fruitTypes.filter(f => f !== fruitType);
+                                    const fruit2Type = fruit2Types[Math.floor(Math.random() * fruit2Types.length)];
+                                    story = `小明買了${weights[0].value}${weights[0].unit}的${fruitType}和${weights[1].value}${weights[1].unit}的${fruit2Type}。`;
+                                    question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>他一共買了多少${weights[0].unit}的水果？</div>`;
+                                    answer = weights[0].value + weights[1].value;
+                                } else { // 減法
+                                    const total = weights[0].value + weights[1].value;
+                                    story = `小明買了${total}${weights[0].unit}的${fruitType}，吃掉了${weights[1].value}${weights[1].unit}。`;
+                                    question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>還剩下多少${weights[0].unit}的${fruitType}？</div>`;
+                                    answer = weights[0].value;
+                                }
+                            }
+                            break;
+                            
+                        case '速度問題':
+                            // 生成簡單速度計算題
+                            const speeds = [
+                                { unit: '公里/小時', value: Math.floor(Math.random() * 30) + 30 }, // 30-59公里/小時
+                                { unit: '小時', value: Math.floor(Math.random() * 3) + 1 }        // 1-3小時
+                            ];
+                            
+                            const vehicles = ['腳踏車', '汽車', '公車', '火車'];
+                            const vehicle = vehicles[Math.floor(Math.random() * vehicles.length)];
+                            
+                            // 速度×時間=距離
+                            const distance = speeds[0].value * speeds[1].value;
+                            
+                            if (Math.random() < 0.5) { // 求距離
+                                story = `小明乘坐${vehicle}，以每小時${speeds[0].value}公里的速度行駛了${speeds[1].value}小時。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>小明行駛了多少公里？</div>`;
+                                answer = distance;
+                            } else { // 求時間
+                                story = `小明乘坐${vehicle}，以每小時${speeds[0].value}公里的速度行駛，一共行駛了${distance}公里。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>小明行駛了多少小時？</div>`;
+                                answer = speeds[1].value;
+                            }
+                            break;
+                    }
+                    
+                    return { question, answer };
+                }
+            },
+            
+            // 3. 進階應用題
+            {
+                name: "進階應用",
+                icon: "brain",
+                generator: function() {
+                    const topics = [
+                        '百分比', 
+                        '比例問題', 
+                        '面積計算', 
+                        '邏輯推理'
+                    ];
+                    const topic = topics[Math.floor(Math.random() * topics.length)];
+                    
+                    let question, answer, story;
+                    
+                    switch(topic) {
+                        case '百分比':
+                            // 生成百分比計算題
+                            const percentages = [10, 20, 25, 30, 40, 50, 60, 75, 80, 90];
+                            const percentage = percentages[Math.floor(Math.random() * percentages.length)];
+                            const total = (Math.floor(Math.random() * 20) + 10) * 10; // 100, 110, 120, ... 290
+                            const part = total * percentage / 100;
+                            
+                            const scenarios = [
+                                { item: '學生', context: `班上有${total}名學生，其中${percentage}%是男生。` },
+                                { item: '蘋果', context: `籃子裡有${total}個蘋果，其中${percentage}%是紅蘋果。` },
+                                { item: '元', context: `小明有${total}元，他花了${percentage}%買文具。` },
+                                { item: '題目', context: `小華做了${total}題數學題，其中${percentage}%做對了。` }
+                            ];
+                            
+                            const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+                            
+                            if (Math.random() < 0.5) { // 求部分
+                                story = scenario.context;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>那麼有多少${scenario.item}${scenario.item === '元' ? '用於買文具' : ''}？</div>`;
+                                answer = part;
+                            } else { // 給定部分求百分比
+                                story = `班上有${total}名學生，其中${part}名是男生。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>男生占全班學生的百分之幾？</div>`;
+                                answer = percentage + '%';
+                            }
+                            break;
+                            
+                        case '比例問題':
+                            // 生成比例計算題
+                            const ratios = [
+                                [1, 2], [1, 3], [1, 4], [2, 3], [2, 5], [3, 4], [3, 5], [3, 7], [4, 5]
+                            ];
+                            const ratio = ratios[Math.floor(Math.random() * ratios.length)];
+                            
+                            const multiplier = Math.floor(Math.random() * 5) + 2; // 2-6
+                            const value1 = ratio[0] * multiplier;
+                            const value2 = ratio[1] * multiplier;
+                            const total_value = value1 + value2;
+                            
+                            if (Math.random() < 0.5) { // 求值
+                                story = `小明和小華分糖果，小明分到的糖果與小華分到的糖果比是${ratio[0]}:${ratio[1]}。他們一共分到${total_value}個糖果。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>小明分到了多少個糖果？</div>`;
+                                answer = value1;
+                            } else { // 給定值求比例
+                                story = `小明有${value1}張貼紙，小華有${value2}張貼紙。`;
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>小明的貼紙數與小華的貼紙數之比是多少？(用最簡分數表示)</div>`;
+                                answer = `${ratio[0]}:${ratio[1]}`;
+                            }
+                            break;
+                            
+                        case '面積計算':
+                            // 生成矩形或正方形面積計算題
+                            if (Math.random() < 0.7) { // 矩形
+                                const length = Math.floor(Math.random() * 10) + 5; // 5-14
+                                const width = Math.floor(Math.random() * 5) + 3;  // 3-7
+                                const area = length * width;
+                                
+                                if (Math.random() < 0.5) { // 求面積
+                                    story = `一個長方形的長是${length}公尺，寬是${width}公尺。`;
+                                    question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>這個長方形的面積是多少平方公尺？</div>`;
+                                    answer = area;
+                                } else { // 給定面積和一邊求另一邊
+                                    if (Math.random() < 0.5) {
+                                        story = `一個長方形的面積是${area}平方公尺，長是${length}公尺。`;
+                                        question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>這個長方形的寬是多少公尺？</div>`;
+                                        answer = width;
+                                    } else {
+                                        story = `一個長方形的面積是${area}平方公尺，寬是${width}公尺。`;
+                                        question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>這個長方形的長是多少公尺？</div>`;
+                                        answer = length;
+                                    }
+                                }
+                            } else { // 正方形
+                                const side = Math.floor(Math.random() * 15) + 5; // 5-19
+                                const area = side * side;
+                                
+                                if (Math.random() < 0.5) { // 求面積
+                                    story = `一個正方形的邊長是${side}厘米。`;
+                                    question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>這個正方形的面積是多少平方厘米？</div>`;
+                                    answer = area;
+                                } else { // 給定面積求邊長
+                                    story = `一個正方形的面積是${area}平方厘米。`;
+                                    question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">${story}<br>這個正方形的邊長是多少厘米？</div>`;
+                                    answer = side;
+                                }
+                            }
+                            break;
+                            
+                        case '邏輯推理':
+                            // 生成簡單邏輯推理題
+                            const logicTypes = ['數列', '規律找數'];
+                            const logicType = logicTypes[Math.floor(Math.random() * logicTypes.length)];
+                            
+                            if (logicType === '數列') {
+                                // 生成等差數列
+                                const start = Math.floor(Math.random() * 10) + 1; // 1-10
+                                const diff = Math.floor(Math.random() * 5) + 1;  // 1-5
+                                
+                                const sequence = [];
+                                for (let i = 0; i < 5; i++) {
+                                    sequence.push(start + diff * i);
+                                }
+                                
+                                const nextNum = start + diff * 5;
+                                
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">找出數列的規律，並填入下一個數：<br><span class="text-2xl">${sequence.join(', ')}，?</span></div>`;
+                                answer = nextNum;
+                            } else { // 規律找數
+                                // 生成乘法或平方規律
+                                const rules = [
+                                    // 平方數
+                                    () => {
+                                        const sequence = [1, 4, 9, 16, 25, 36, 49, 64];
+                                        const selected = Math.floor(Math.random() * (sequence.length - 4));
+                                        return { sequence: sequence.slice(selected, selected + 4), next: sequence[selected + 4] };
+                                    },
+                                    // 乘以固定數
+                                    () => {
+                                        const multiplier = Math.floor(Math.random() * 3) + 2; // 2, 3, 4
+                                        const start = Math.floor(Math.random() * 4) + 1; // 1-4
+                                        
+                                        const sequence = [];
+                                        let current = start;
+                                        for (let i = 0; i < 4; i++) {
+                                            sequence.push(current);
+                                            current *= multiplier;
+                                        }
+                                        
+                                        return { sequence, next: current };
+                                    },
+                                    // 斐波那契數列的一部分
+                                    () => {
+                                        const fibonacci = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+                                        const selected = Math.floor(Math.random() * (fibonacci.length - 5));
+                                        return { sequence: fibonacci.slice(selected, selected + 4), next: fibonacci[selected + 4] };
+                                    }
+                                ];
+                                
+                                const rule = rules[Math.floor(Math.random() * rules.length)]();
+                                question = `<div class="word-problem bg-amber-50 dark:bg-gray-800 p-4 mb-2 rounded-lg">找出數列的規律，並填入下一個數：<br><span class="text-2xl">${rule.sequence.join(', ')}，?</span></div>`;
+                                answer = rule.next;
+                            }
+                            break;
+                    }
+                    
+                    return { question, answer };
+                }
+            }
+        ];
+
+        // 生成題目
         function generateQuestion() {
             // 隱藏之前的反饋
             feedback.className = 'hidden';
             
-            // 隨機選擇問題類型: 0=加法, 1=減法, 2=乘法
-            const questionType = Math.floor(Math.random() * 3);
+            // 隨機選擇題型
+            const questionTypeIndex = Math.floor(Math.random() * questionTypes.length);
+            const questionType = questionTypes[questionTypeIndex];
             
-            let num1, num2, answer, question;
+            // 生成問題和答案
+            const { question, answer } = questionType.generator();
             
-            switch (questionType) {
-                case 0: // 加法
-                    num1 = Math.floor(Math.random() * 50) + 1;
-                    num2 = Math.floor(Math.random() * 50) + 1;
-                    answer = num1 + num2;
-                    question = `${num1} + ${num2} = ?`;
-                    break;
-                case 1: // 減法 (確保結果為正數)
-                    num1 = Math.floor(Math.random() * 50) + 51; // 51-100
-                    num2 = Math.floor(Math.random() * 50) + 1;  // 1-50
-                    answer = num1 - num2;
-                    question = `${num1} - ${num2} = ?`;
-                    break;
-                case 2: // 乘法 (簡單乘法)
-                    num1 = Math.floor(Math.random() * 10) + 1;
-                    num2 = Math.floor(Math.random() * 10) + 1;
-                    answer = num1 * num2;
-                    question = `${num1} × ${num2} = ?`;
-                    break;
+            // 生成選項
+            let options = [];
+            const correctAnswer = answer;
+            
+            // 特殊情況處理
+            let answerIsText = false;
+            let numAnswer;
+            
+            if (typeof correctAnswer === 'string') {
+                // 檢查是否為百分比形式
+                if (correctAnswer.includes('%')) {
+                    const numValue = parseInt(correctAnswer);
+                    numAnswer = numValue;
+                    options = generateNumericOptions(numValue, 5, 10);
+                    options = options.map(opt => opt + '%');
+                }
+                // 檢查是否為比例形式 (如 1:2)
+                else if (correctAnswer.includes(':')) {
+                    answerIsText = true;
+                    const ratios = [
+                        '1:2', '1:3', '1:4', '2:3', '2:5', '3:4', '3:5', '3:7', '4:5',
+                        '5:6', '5:8', '6:7', '7:8', '7:9', '8:9'
+                    ];
+                    options = [correctAnswer];
+                    
+                    // 從其他比例中選擇三個不同的選項
+                    while (options.length < 4) {
+                        const newRatio = ratios[Math.floor(Math.random() * ratios.length)];
+                        if (!options.includes(newRatio)) {
+                            options.push(newRatio);
+                        }
+                    }
+                }
+                // 檢查是否為分數形式 (如 3/4)
+                else if (correctAnswer.includes('/')) {
+                    answerIsText = true;
+                    const fractions = [
+                        '1/2', '1/3', '1/4', '1/5', '2/3', '2/5', '3/4', '3/5', '3/8', '4/5',
+                        '5/6', '5/8', '6/7', '7/8', '7/9', '8/9'
+                    ];
+                    options = [correctAnswer];
+                    
+                    // 從其他分數中選擇三個不同的選項
+                    while (options.length < 4) {
+                        const newFraction = fractions[Math.floor(Math.random() * fractions.length)];
+                        if (!options.includes(newFraction)) {
+                            options.push(newFraction);
+                        }
+                    }
+                }
+                // 混合數檢查 (如 "2又1/3")
+                else if (correctAnswer.includes('又')) {
+                    answerIsText = true;
+                    // 生成幾個可能的混合數
+                    const mixedNumbers = [
+                        '1又1/2', '1又1/3', '1又2/3', '2又1/4', '2又1/3', '2又2/3',
+                        '2又3/4', '3又1/4', '3又1/2', '3又3/4'
+                    ];
+                    options = [correctAnswer];
+                    
+                    // 從其他混合數中選擇三個不同的選項
+                    while (options.length < 4) {
+                        const newMixed = mixedNumbers[Math.floor(Math.random() * mixedNumbers.length)];
+                        if (!options.includes(newMixed)) {
+                            options.push(newMixed);
+                        }
+                    }
+                }
+                else {
+                    // 嘗試將字串轉換為數字
+                    numAnswer = parseFloat(correctAnswer);
+                    if (!isNaN(numAnswer)) {
+                        options = generateNumericOptions(numAnswer, 5, 10);
+                    } else {
+                        // 如果無法轉換，則這是一個文本答案
+                        answerIsText = true;
+                        options = [correctAnswer, '錯誤答案1', '錯誤答案2', '錯誤答案3'];
+                    }
+                }
+            } else {
+                // 數字答案
+                numAnswer = correctAnswer;
+                options = generateNumericOptions(correctAnswer, 5, 10);
             }
             
-            // 創建錯誤答案 (保證與正確答案和其他錯誤答案不同)
-            let wrongAnswers = [];
-            while (wrongAnswers.length < 3) {
-                // 生成與正確答案相差 -5 到 +5 之間的錯誤答案，但不能是0
-                let offset = 0;
-                while (offset === 0) {
-                    offset = Math.floor(Math.random() * 11) - 5;
-                }
-                
-                const wrongAnswer = answer + offset;
-                
-                // 確保錯誤答案是大於0的，且不重複
-                if (wrongAnswer > 0 && !wrongAnswers.includes(wrongAnswer) && wrongAnswer !== answer) {
-                    wrongAnswers.push(wrongAnswer);
-                }
+            // 如果是文本選項，隨機排序
+            if (answerIsText) {
+                options = shuffleArray(options);
             }
             
-            // 將正確答案隨機插入選項
-            const correctIndex = Math.floor(Math.random() * 4); // 0 to 3
-            let options = [...wrongAnswers];
-            options.splice(correctIndex, 0, answer);
-            
-            // 更新UI並添加打字機效果
-            questionText.textContent = question;
+            // 更新UI
+            questionText.innerHTML = question;
             answerA.textContent = options[0];
             answerB.textContent = options[1];
             answerC.textContent = options[2];
             answerD.textContent = options[3];
             
+            // 確定正確選項
+            let correctOption;
+            if (answerIsText) {
+                const correctIndex = options.findIndex(opt => opt === correctAnswer);
+                correctOption = String.fromCharCode(65 + correctIndex); // A, B, C, or D
+            } else {
+                // 找出和正確答案最接近的選項
+                let minDiff = Infinity;
+                let correctIndex = 0;
+                
+                for (let i = 0; i < options.length; i++) {
+                    let optionValue = options[i];
+                    // 移除百分比符號進行比較
+                    if (typeof optionValue === 'string' && optionValue.includes('%')) {
+                        optionValue = parseInt(optionValue);
+                    }
+                    
+                    const diff = Math.abs(optionValue - numAnswer);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        correctIndex = i;
+                    }
+                }
+                
+                correctOption = String.fromCharCode(65 + correctIndex); // A, B, C, or D
+            }
+            
             // 儲存當前問題資訊
             currentQuestion = {
                 question,
-                answer,
+                answer: correctAnswer,
                 options,
-                correctOption: String.fromCharCode(65 + correctIndex) // A, B, C, or D
+                correctOption
             };
 
             // 添加動畫效果
@@ -499,6 +1092,54 @@
             setTimeout(() => {
                 questionText.classList.remove('animate-float');
             }, 1000);
+        }
+
+        // 生成數字選項
+        function generateNumericOptions(correctAnswer, maxVariation, minVariation = 1) {
+            let options = [correctAnswer];
+            
+            // 處理正確答案是0的特殊情況
+            if (correctAnswer === 0) {
+                while (options.length < 4) {
+                    const newOption = Math.floor(Math.random() * 5) + 1; // 1-5
+                    if (!options.includes(newOption)) {
+                        options.push(newOption);
+                    }
+                }
+                return shuffleArray(options);
+            }
+            
+            // 計算變化範圍
+            const variation = Math.max(Math.ceil(correctAnswer * 0.2), minVariation);
+            const actualVariation = Math.min(variation, maxVariation);
+            
+            // 生成錯誤選項
+            while (options.length < 4) {
+                // 隨機決定加或減，但確保結果為正
+                let offset;
+                do {
+                    offset = Math.floor(Math.random() * actualVariation * 2 + 1) - actualVariation;
+                } while (offset === 0 || correctAnswer + offset <= 0);
+                
+                const newOption = correctAnswer + offset;
+                
+                // 確保沒有重複選項
+                if (!options.includes(newOption)) {
+                    options.push(newOption);
+                }
+            }
+            
+            return shuffleArray(options);
+        }
+
+        // 數組洗牌
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
         }
 
         // 處理答案
