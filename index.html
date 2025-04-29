@@ -3,22 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Microbit 數學遊戲</title>
+    <title>數字獵狩 - Microbit 數學遊戲</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#5D5CDE',
+                        primary: {
+                            light: '#F59E0B', // 琥珀色
+                            DEFAULT: '#D97706',
+                            dark: '#B45309',
+                        },
+                        secondary: {
+                            light: '#4F46E5', // 靛藍色
+                            DEFAULT: '#4338CA',
+                            dark: '#3730A3',
+                        },
+                        forest: {
+                            light: '#10B981', // 翠綠色
+                            DEFAULT: '#059669',
+                            dark: '#047857',
+                        }
+                    },
+                    fontFamily: {
+                        game: ['Comic Sans MS', 'cursive', 'sans-serif']
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 3s infinite',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'wiggle': 'wiggle 1s ease-in-out infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        wiggle: {
+                            '0%, 100%': { transform: 'rotate(-3deg)' },
+                            '50%': { transform: 'rotate(3deg)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
                     }
                 }
             }
         }
     </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700&display=swap');
+
+        /* 自定義CSS變量 */
+        :root {
+            --target-outer: #F87171;
+            --target-inner: #FECACA;
+        }
+
+        .dark {
+            --target-outer: #991B1B;
+            --target-inner: #7F1D1D;
+        }
+
+        body {
+            font-family: 'Baloo 2', cursive, system-ui, sans-serif;
+            background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.08"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
+        }
+
+        .dark body {
+            background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
+        }
+
+        /* 靶心設計 */
+        .target-ring {
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .target-ring::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border: 3px dashed var(--target-outer);
+            border-radius: 50%;
+            animation: spin 20s linear infinite;
+            opacity: 0.5;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 答案選項動畫 */
+        .option-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .option-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .option-card:hover::after {
+            transform: translateX(100%);
+        }
+
+        /* 射擊動畫 */
+        @keyframes hit {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .hit-animation {
+            animation: hit 0.5s ease-out;
+        }
+
+        /* 得分增加動畫 */
+        @keyframes scoreUp {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); color: #10B981; }
+            100% { transform: scale(1); }
+        }
+
+        .score-up {
+            animation: scoreUp 0.7s ease;
+        }
+
+        /* 質感按鈕 */
+        .game-button {
+            position: relative;
+            transition: all 0.2s ease;
+            transform-style: preserve-3d;
+        }
+
+        .game-button::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.2);
+            transform: translateZ(-1px);
+            border-radius: inherit;
+            transition: transform 0.2s ease;
+        }
+
+        .game-button:active {
+            transform: translateY(4px);
+        }
+
+        .game-button:active::after {
+            transform: translateZ(-1px) translateY(-4px);
+        }
+
+        /* 標題動畫 */
+        .title-animated {
+            display: inline-block;
+            position: relative;
+        }
+
+        .title-animated::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: currentColor;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.5s ease;
+        }
+
+        .title-animated:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+    </style>
 </head>
-<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+<body class="bg-orange-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
     <!-- 檢測深色/淺色模式 -->
     <script>
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -33,82 +220,103 @@
         });
     </script>
 
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 py-6">
         <header class="mb-8">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="text-center">
-                    <h1 class="text-3xl font-bold text-primary">Microbit 數學遊戲</h1>
-                    <p class="mt-2 text-gray-600 dark:text-gray-400">使用Microbit裝置回答數學問題</p>
+                    <h1 class="text-4xl font-bold text-primary-dark dark:text-primary-light flex items-center">
+                        <span class="title-animated mr-2">數字獵狩</span>
+                        <i class="fas fa-crosshairs text-secondary-light animate-pulse ml-2"></i>
+                    </h1>
+                    <p class="mt-2 text-gray-600 dark:text-gray-400 italic">
+                        瞄準數學問題，擊中正確答案！
+                    </p>
                 </div>
-                <button id="connect-button" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition">
-                    連接 Microbit
+                <button id="connect-button" class="game-button bg-gradient-to-r from-primary-light to-primary px-6 py-3 text-white rounded-full shadow-lg hover:shadow-xl flex items-center space-x-2 transform hover:scale-105 transition-all">
+                    <i class="fas fa-plug mr-2"></i>
+                    <span>連接獵狩裝置</span>
                 </button>
             </div>
-
         </header>
 
-        <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 border-2 border-primary-light dark:border-primary-dark">
             <!-- 遊戲區域 -->
             <div id="game-section" class="opacity-50 pointer-events-none">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold">玩遊戲</h2>
+                    <div class="flex items-center">
+                        <i class="fas fa-gamepad text-secondary-light text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-secondary-dark dark:text-secondary-light">射擊挑戰</h2>
+                    </div>
                     <div class="flex items-center space-x-4">
-                        <div class="text-right">
-                            <span class="text-gray-600 dark:text-gray-400">得分：</span>
-                            <span id="score" class="font-bold text-primary text-xl">0</span>
+                        <div class="bg-gray-100 dark:bg-gray-700 rounded-full px-5 py-2 flex items-center">
+                            <i class="fas fa-star text-yellow-500 mr-2"></i>
+                            <span class="text-gray-600 dark:text-gray-300 font-medium">獵人得分：</span>
+                            <span id="score" class="font-bold text-primary text-2xl ml-2">0</span>
                         </div>
-                        <button id="start-button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
-                            開始遊戲
+                        <button id="start-button" class="game-button bg-gradient-to-r from-forest-light to-forest px-6 py-3 text-white rounded-full shadow-md hover:shadow-lg flex items-center">
+                            <i class="fas fa-play mr-2"></i>
+                            <span>開始挑戰</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- 問題展示區 -->
-                <div id="question-container" class="p-6 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4">
-                    <div id="question-text" class="text-xl font-medium text-center mb-6">
-                        準備好後點擊「開始遊戲」按鈕
+                <!-- 問題展示區 - 獵場 -->
+                <div id="question-container" class="p-8 bg-gradient-to-br from-amber-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 rounded-xl mb-6 shadow-inner border border-amber-200 dark:border-gray-700">
+                    <div class="target-ring w-24 h-24 mx-auto mb-4 bg-white dark:bg-gray-700 border-8 border-red-400 dark:border-red-800">
+                        <div class="w-16 h-16 bg-red-300 dark:bg-red-900 rounded-full flex items-center justify-center">
+                            <i class="fas fa-bullseye text-red-600 dark:text-red-400 text-2xl"></i>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+
+                    <div id="question-text" class="text-3xl font-bold text-center mb-8 py-3 px-6 bg-white dark:bg-gray-800 rounded-xl shadow-md inline-block mx-auto animate-float">
+                        準備好後點擊「開始挑戰」按鈕
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="option-card bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:bg-amber-50 dark:hover:bg-gray-700 border-2 border-transparent hover:border-primary-light dark:hover:border-primary cursor-pointer">
                             <div class="flex items-center">
-                                <div class="h-8 w-8 flex items-center justify-center bg-primary text-white rounded-full mr-3">
-                                    A
+                                <div class="h-12 w-12 flex items-center justify-center bg-primary-light text-white rounded-full mr-4 shadow-md">
+                                    <span class="text-xl font-bold">A</span>
                                 </div>
-                                <div id="answer-a" class="text-lg">-</div>
+                                <div id="answer-a" class="text-2xl font-medium">-</div>
                             </div>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                        <div class="option-card bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:bg-amber-50 dark:hover:bg-gray-700 border-2 border-transparent hover:border-primary-light dark:hover:border-primary cursor-pointer">
                             <div class="flex items-center">
-                                <div class="h-8 w-8 flex items-center justify-center bg-primary text-white rounded-full mr-3">
-                                    B
+                                <div class="h-12 w-12 flex items-center justify-center bg-primary-light text-white rounded-full mr-4 shadow-md">
+                                    <span class="text-xl font-bold">B</span>
                                 </div>
-                                <div id="answer-b" class="text-lg">-</div>
+                                <div id="answer-b" class="text-2xl font-medium">-</div>
                             </div>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                        <div class="option-card bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:bg-amber-50 dark:hover:bg-gray-700 border-2 border-transparent hover:border-primary-light dark:hover:border-primary cursor-pointer">
                             <div class="flex items-center">
-                                <div class="h-8 w-8 flex items-center justify-center bg-primary text-white rounded-full mr-3">
-                                    C
+                                <div class="h-12 w-12 flex items-center justify-center bg-primary-light text-white rounded-full mr-4 shadow-md">
+                                    <span class="text-xl font-bold">C</span>
                                 </div>
-                                <div id="answer-c" class="text-lg">-</div>
+                                <div id="answer-c" class="text-2xl font-medium">-</div>
                             </div>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                        <div class="option-card bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:bg-amber-50 dark:hover:bg-gray-700 border-2 border-transparent hover:border-primary-light dark:hover:border-primary cursor-pointer">
                             <div class="flex items-center">
-                                <div class="h-8 w-8 flex items-center justify-center bg-primary text-white rounded-full mr-3">
-                                    D
+                                <div class="h-12 w-12 flex items-center justify-center bg-primary-light text-white rounded-full mr-4 shadow-md">
+                                    <span class="text-xl font-bold">D</span>
                                 </div>
-                                <div id="answer-d" class="text-lg">-</div>
+                                <div id="answer-d" class="text-2xl font-medium">-</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="feedback" class="hidden p-4 rounded-lg mb-4 text-center font-bold"></div>
+                <div id="feedback" class="hidden p-6 rounded-xl mb-6 text-center font-bold text-xl flex items-center justify-center">
+                    <span id="feedback-text"></span>
+                </div>
             </div>
         </div>
 
-
+        <footer class="mt-6 text-center text-gray-500 dark:text-gray-400 text-sm">
+            <p>數字獵狩 &copy; 2023 - 小五小六數學練習遊戲</p>
+        </footer>
     </div>
 
     <script>
@@ -123,7 +331,6 @@
 
         // DOM元素
         const connectButton = document.getElementById('connect-button');
-
         const startButton = document.getElementById('start-button');
         const scoreDisplay = document.getElementById('score');
         const questionText = document.getElementById('question-text');
@@ -133,12 +340,15 @@
         const answerD = document.getElementById('answer-d');
         const gameSection = document.getElementById('game-section');
         const feedback = document.getElementById('feedback');
+        const feedbackText = document.getElementById('feedback-text');
+        const targetRing = document.querySelector('.target-ring');
+
         // 連接到Microbit
         connectButton.addEventListener('click', async () => {
             try {
                 // 檢查瀏覽器是否支援Web Serial API
                 if (!('serial' in navigator)) {
-                    updateConnectionStatus('您的瀏覽器不支援Web Serial API。請使用Chrome或Edge瀏覽器。', true);
+                    showNotification('您的瀏覽器不支援Web Serial API。請使用Chrome或Edge瀏覽器。', true);
                     return;
                 }
 
@@ -147,13 +357,14 @@
                 await port.open({ baudRate: 115200 });
                 
                 // 設置讀取器
-                const decoder = new TextDecoder();
                 reader = port.readable.getReader();
                 
                 // 更新連接狀態
-                updateConnectionStatus('已連接 - Microbit準備就緒！', false);
-                connectButton.textContent = '已連接';
+                showNotification('已連接 - 獵狩裝置準備就緒！', false);
+                connectButton.innerHTML = '<i class="fas fa-check-circle mr-2"></i><span>已連接</span>';
                 connectButton.disabled = true;
+                connectButton.classList.remove('from-primary-light', 'to-primary');
+                connectButton.classList.add('from-green-500', 'to-green-600');
                 
                 // 啟用遊戲區域
                 gameSection.classList.remove('opacity-50', 'pointer-events-none');
@@ -163,9 +374,21 @@
                 readData();
             } catch (error) {
                 console.error('連接錯誤:', error);
-                updateConnectionStatus(`連接錯誤: ${error.message}`, true);
+                showNotification(`連接錯誤: ${error.message}`, true);
             }
         });
+
+        // 顯示通知（僅在控制台）
+        function showNotification(message, isError) {
+            const statusType = isError ? 'error' : 'info';
+            const statusPrefix = isError ? '錯誤: ' : '狀態: ';
+            
+            if (isError) {
+                console.error(statusPrefix + message);
+            } else {
+                console.log(statusPrefix + message);
+            }
+        }
 
         // 讀取Microbit數據
         async function readData() {
@@ -178,6 +401,7 @@
                     }
                     // 將接收到的數據解碼為文本
                     const valueString = new TextDecoder().decode(value).trim();
+                    console.log("接收到的數據:", valueString);
                     // 處理接收到的選項
                     if (valueString === 'A' || valueString === 'B' || valueString === 'C' || valueString === 'D') {
                         processAnswer(valueString);
@@ -189,28 +413,16 @@
             }
         }
 
-        // 更新連接狀態（通過console log）
-        function updateConnectionStatus(message, isError) {
-            const statusType = isError ? 'error' : 'info';
-            const statusPrefix = isError ? '錯誤: ' : '狀態: ';
-            
-            if (isError) {
-                console.error(statusPrefix + message);
-            } else {
-                console.log(statusPrefix + message);
-            }
-        }
-
         // 開始遊戲
         startButton.addEventListener('click', () => {
-            if (!gameEnabled && !confirm('你尚未連接Microbit。要在測試模式下開始遊戲嗎？')) {
+            if (!gameEnabled && !confirm('你尚未連接獵狩裝置。要繼續嗎？')) {
                 return;
             }
             
             isGameRunning = true;
             score = 0;
             scoreDisplay.textContent = '0';
-            startButton.textContent = '下一題';
+            startButton.innerHTML = '<i class="fas fa-forward mr-2"></i><span>下一題</span>';
             generateQuestion();
         });
 
@@ -267,7 +479,7 @@
             let options = [...wrongAnswers];
             options.splice(correctIndex, 0, answer);
             
-            // 更新UI
+            // 更新UI並添加打字機效果
             questionText.textContent = question;
             answerA.textContent = options[0];
             answerB.textContent = options[1];
@@ -281,6 +493,12 @@
                 options,
                 correctOption: String.fromCharCode(65 + correctIndex) // A, B, C, or D
             };
+
+            // 添加動畫效果
+            questionText.classList.add('animate-float');
+            setTimeout(() => {
+                questionText.classList.remove('animate-float');
+            }, 1000);
         }
 
         // 處理答案
@@ -289,19 +507,46 @@
             
             const isCorrect = option === currentQuestion.correctOption;
             
+            // 獲取選中的選項元素
+            const selectedOptionIndex = option.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+            const selectedOptionElement = document.querySelectorAll('.option-card')[selectedOptionIndex];
+            
+            // 添加射擊動畫
+            selectedOptionElement.classList.add('hit-animation');
+            setTimeout(() => {
+                selectedOptionElement.classList.remove('hit-animation');
+            }, 500);
+            
+            // 添加靶心動畫
+            targetRing.classList.add('hit-animation');
+            setTimeout(() => {
+                targetRing.classList.remove('hit-animation');
+            }, 500);
+            
             // 顯示反饋
-            feedback.textContent = isCorrect 
-                ? '✓ 正確！' 
-                : `✗ 錯誤。正確答案是: ${currentQuestion.correctOption}`;
+            feedbackText.textContent = isCorrect 
+                ? '✓ 正中目標！' 
+                : `✗ 射偏了！正確答案是: ${currentQuestion.correctOption}`;
             
             feedback.className = isCorrect 
-                ? 'block p-4 rounded-lg mb-4 text-center font-bold bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' 
-                : 'block p-4 rounded-lg mb-4 text-center font-bold bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300';
+                ? 'block p-6 rounded-xl mb-6 text-center font-bold text-xl bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 flex items-center justify-center'
+                : 'block p-6 rounded-xl mb-6 text-center font-bold text-xl bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 flex items-center justify-center';
+            
+            // 添加反饋圖標
+            if (isCorrect) {
+                feedbackText.innerHTML = `<i class="fas fa-bullseye mr-2"></i> 正中目標！`;
+            } else {
+                feedbackText.innerHTML = `<i class="fas fa-times-circle mr-2"></i> 射偏了！正確答案是: ${currentQuestion.correctOption}`;
+            }
                 
-            // 更新分數
+            // 更新分數並添加動畫
             if (isCorrect) {
                 score++;
                 scoreDisplay.textContent = score;
+                scoreDisplay.classList.add('score-up');
+                setTimeout(() => {
+                    scoreDisplay.classList.remove('score-up');
+                }, 700);
             }
             
             // 延遲後生成新問題
@@ -312,7 +557,15 @@
             }, 1500);
         }
 
-
+        // 添加鍵盤支持（用於測試）
+        document.addEventListener('keydown', (e) => {
+            if (!isGameRunning) return;
+            
+            const key = e.key.toUpperCase();
+            if (key === 'A' || key === 'B' || key === 'C' || key === 'D') {
+                processAnswer(key);
+            }
+        });
     </script>
 </body>
 </html>
