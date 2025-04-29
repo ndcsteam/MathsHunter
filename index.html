@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microbit 數學選擇題遊戲</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+        .answer-pulse {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-primary">Microbit 數學選擇題遊戲</h1>
+            <p class="mt-2 text-gray-600 dark:text-gray-400">使用 Microbit 來回答數學問題</p>
+        </header>
+
+        <!-- 連接頁面 -->
+        <div id="connect-screen" class="flex flex-col items-center">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-md">
+                <h2 class="text-xl font-semibold mb-4">連接您的 Microbit</h2>
+                <p class="mb-4">
+                    請將接收 Microbit 連接到電腦的 USB 埠，並點擊下方按鈕連接。
+                    <br><br>
+                    遊戲開始後，其他玩家可以用 Microbit 發送「A」、「B」、「C」或「D」來回答問題。
+                </p>
+                <div class="flex flex-col gap-2">
+                    <div id="connection-status" class="text-sm text-gray-600 dark:text-gray-400">未連接</div>
+                    <button id="connect-button" class="bg-primary hover:bg-opacity-90 text-white py-2 px-4 rounded-md">
+                        連接 Microbit
+                    </button>
+                </div>
+            </div>
+            <div class="mt-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-md">
+                <h2 class="text-xl font-semibold mb-4">設置說明</h2>
+                <p class="mb-2">1. 將接收 Microbit 連接到電腦</p>
+                <p class="mb-2">2. 在接收 Microbit 上加載以下程式碼：</p>
+                <pre class="bg-gray-100 dark:bg-gray-700 p-3 rounded text-sm overflow-auto mb-4">
+# 接收 Microbit 程式碼
+from microbit import *
+import radio
+
+# 設置單一 radio 頻道 (33)
+radio.config(channel=33)
+radio.on()
+
+while True:
+    # 檢查是否有廣播訊息
+    message = radio.receive()
+    if message:
+        # 只傳送 A、B、C、D 的選項
+        if message in ["A", "B", "C", "D"]:
+            print(message)
+    sleep(100)
+                </pre>
+                <p class="mb-2">3. 在發送 Microbit 上加載以下程式碼：</p>
+                <pre class="bg-gray-100 dark:bg-gray-700 p-3 rounded text-sm overflow-auto">
+# 發送 Microbit 程式碼
+from microbit import *
+import radio
+
+# 設置單一 radio 頻道 (33)
+radio.config(channel=33)
+radio.on()
+
+while True:
+    if button_a.was_pressed():
+        radio.send("A")
+        display.show("A")
+        sleep(500)
+        display.clear()
+    elif button_b.was_pressed():
+        radio.send("B")
+        display.show("B")
+        sleep(500)
+        display.clear()
+    elif accelerometer.was_gesture("shake"):
+        radio.send("C")
+        display.show("C")
+        sleep(500)
+        display.clear()
+    elif pin_logo.is_touched():
+        radio.send("D")
+        display.show("D")
+        sleep(500)
+        display.clear()
+    sleep(100)
+                </pre>
+            </div>
+        </div>
+
+        <!-- 遊戲頁面 -->
+        <div id="game-screen" class="hidden">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <span class="font-bold">問題: </span>
+                        <span id="question-number">1</span>/<span id="total-questions">10</span>
+                    </div>
+                    <div>
+                        <span class="font-bold">得分: </span>
+                        <span id="score">0</span>
+                    </div>
+                </div>
+                
+                <div id="question-container" class="mb-6">
+                    <h2 class="text-xl font-bold mb-2">問題:</h2>
+                    <p id="question-text" class="text-lg mb-4">讀取中...</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+                        <div id="option-a" class="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <span class="font-bold">A:</span> <span id="option-a-text"></span>
+                        </div>
+                        <div id="option-b" class="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <span class="font-bold">B:</span> <span id="option-b-text"></span>
+                        </div>
+                        <div id="option-c" class="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <span class="font-bold">C:</span> <span id="option-c-text"></span>
+                        </div>
+                        <div id="option-d" class="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <span class="font-bold">D:</span> <span id="option-d-text"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="feedback-container" class="mb-4 p-4 rounded-lg hidden"></div>
+                
+                <div id="microbit-signals" class="mb-4">
+                    <h3 class="font-semibold mb-2">最近接收到的訊號:</h3>
+                    <div id="signal-log" class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg h-20 overflow-y-auto text-sm"></div>
+                </div>
+                
+                <div class="flex justify-end mt-4">
+                    <button id="next-question" class="bg-primary hover:bg-opacity-90 text-white py-2 px-4 rounded-md hidden">
+                        下一題
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 結果頁面 -->
+        <div id="result-screen" class="hidden">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md text-center">
+                <h2 class="text-2xl font-bold mb-4">遊戲結束!</h2>
+                <p class="text-lg mb-2">您的得分: <span id="final-score">0</span> / <span id="max-score">10</span></p>
+                <p id="performance-message" class="mb-6"></p>
+                <button id="restart-button" class="bg-primary hover:bg-opacity-90 text-white py-2 px-4 rounded-md">
+                    重新開始
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 暗黑模式檢測
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // 變數初始化
+        const connectScreen = document.getElementById('connect-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const connectButton = document.getElementById('connect-button');
+        const connectionStatus = document.getElementById('connection-status');
+        const questionNumber = document.getElementById('question-number');
+        const totalQuestions = document.getElementById('total-questions');
+        const scoreElement = document.getElementById('score');
+        const questionText = document.getElementById('question-text');
+        const optionAText = document.getElementById('option-a-text');
+        const optionBText = document.getElementById('option-b-text');
+        const optionCText = document.getElementById('option-c-text');
+        const optionDText = document.getElementById('option-d-text');
+        const optionA = document.getElementById('option-a');
+        const optionB = document.getElementById('option-b');
+        const optionC = document.getElementById('option-c');
+        const optionD = document.getElementById('option-d');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const nextQuestionButton = document.getElementById('next-question');
+        const signalLog = document.getElementById('signal-log');
+        const finalScore = document.getElementById('final-score');
+        const maxScore = document.getElementById('max-score');
+        const performanceMessage = document.getElementById('performance-message');
+        const restartButton = document.getElementById('restart-button');
+
+        let port;
+        let reader;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let questions = [];
+        let waitingForAnswer = false;
+        let lastReceivedSignal = null;
+
+        // 生成數學問題
+        function generateQuestions(numQuestions = 10) {
+            const questions = [];
+            
+            for (let i = 0; i < numQuestions; i++) {
+                // 隨機決定問題類型: 0=加法, 1=減法, 2=乘法, 3=除法
+                const operationType = Math.floor(Math.random() * 4);
+                let num1, num2, answer, operation, questionText;
+                let options = [];
+
+                switch (operationType) {
+                    case 0: // 加法
+                        num1 = Math.floor(Math.random() * 50) + 1;
+                        num2 = Math.floor(Math.random() * 50) + 1;
+                        answer = num1 + num2;
+                        operation = '+';
+                        break;
+                    case 1: // 減法
+                        num1 = Math.floor(Math.random() * 50) + 51; // 較大的數
+                        num2 = Math.floor(Math.random() * 50) + 1;  // 較小的數
+                        answer = num1 - num2;
+                        operation = '-';
+                        break;
+                    case 2: // 乘法
+                        num1 = Math.floor(Math.random() * 12) + 1;
+                        num2 = Math.floor(Math.random() * 12) + 1;
+                        answer = num1 * num2;
+                        operation = '×';
+                        break;
+                    case 3: // 除法
+                        num2 = Math.floor(Math.random() * 10) + 1;
+                        answer = Math.floor(Math.random() * 10) + 1;
+                        num1 = num2 * answer; // 確保整除
+                        operation = '÷';
+                        break;
+                }
+
+                questionText = `${num1} ${operation} ${num2} = ?`;
+                
+                // 生成選項
+                options.push(answer); // 正確答案
+                
+                // 生成3個不同的錯誤選項
+                while (options.length < 4) {
+                    let wrongAnswer;
+                    if (operationType <= 1) { // 加減法
+                        wrongAnswer = answer + (Math.floor(Math.random() * 10) - 5);
+                    } else { // 乘除法
+                        wrongAnswer = answer + (Math.floor(Math.random() * 6) - 3);
+                    }
+                    
+                    // 確保不重複且不是負數
+                    if (!options.includes(wrongAnswer) && wrongAnswer > 0) {
+                        options.push(wrongAnswer);
+                    }
+                }
+                
+                // 打亂選項順序
+                options = shuffleArray(options);
+                
+                // 找出正確答案的索引
+                const correctIndex = options.indexOf(answer);
+                const correctOption = ['A', 'B', 'C', 'D'][correctIndex];
+                
+                questions.push({
+                    question: questionText,
+                    options: options,
+                    correctAnswer: correctOption
+                });
+            }
+            
+            return questions;
+        }
+
+        // 打亂數組
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 開始新遊戲
+        function startNewGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            questions = generateQuestions(10);
+            
+            // 更新界面
+            scoreElement.textContent = score;
+            totalQuestions.textContent = questions.length;
+            displayQuestion(currentQuestionIndex);
+            
+            // 顯示遊戲畫面
+            connectScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+        }
+
+        // 顯示問題
+        function displayQuestion(index) {
+            if (index >= questions.length) {
+                endGame();
+                return;
+            }
+            
+            const question = questions[index];
+            
+            // 更新問題和選項
+            questionNumber.textContent = index + 1;
+            questionText.textContent = question.question;
+            optionAText.textContent = question.options[0];
+            optionBText.textContent = question.options[1];
+            optionCText.textContent = question.options[2];
+            optionDText.textContent = question.options[3];
+            
+            // 重設界面
+            feedbackContainer.classList.add('hidden');
+            nextQuestionButton.classList.add('hidden');
+            
+            // 清除之前的選項狀態
+            optionA.className = "p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600";
+            optionB.className = "p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600";
+            optionC.className = "p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600";
+            optionD.className = "p-4 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600";
+            
+            // 等待回答
+            waitingForAnswer = true;
+        }
+
+        // 處理回答
+        function handleAnswer(answer) {
+            if (!waitingForAnswer) return;
+            
+            waitingForAnswer = false;
+            const currentQuestion = questions[currentQuestionIndex];
+            const isCorrect = answer === currentQuestion.correctAnswer;
+            
+            // 高亮顯示選擇的答案
+            highlightOption(answer, isCorrect);
+            
+            // 高亮顯示正確答案（如果答錯）
+            if (!isCorrect) {
+                highlightOption(currentQuestion.correctAnswer, true);
+            }
+            
+            // 更新得分
+            if (isCorrect) {
+                score++;
+                scoreElement.textContent = score;
+            }
+            
+            // 顯示反饋
+            feedbackContainer.textContent = isCorrect ? 
+                "✓ 正確!" : 
+                "✗ 錯誤! 正確答案是 " + currentQuestion.correctAnswer;
+            feedbackContainer.className = "mb-4 p-4 rounded-lg " + 
+                (isCorrect ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : 
+                             "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200");
+            feedbackContainer.classList.remove('hidden');
+            
+            // 顯示下一題按鈕
+            nextQuestionButton.classList.remove('hidden');
+        }
+
+        // 高亮選項
+        function highlightOption(option, isCorrect) {
+            const optionElement = document.getElementById(`option-${option.toLowerCase()}`);
+            if (isCorrect) {
+                optionElement.className = "p-4 bg-green-100 dark:bg-green-900 rounded-lg";
+            } else {
+                optionElement.className = "p-4 bg-red-100 dark:bg-red-900 rounded-lg";
+            }
+        }
+
+        // 結束遊戲
+        function endGame() {
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            
+            finalScore.textContent = score;
+            maxScore.textContent = questions.length;
+            
+            // 顯示表現評價
+            const percentage = (score / questions.length) * 100;
+            if (percentage >= 90) {
+                performanceMessage.textContent = "太棒了! 你是數學天才!";
+            } else if (percentage >= 70) {
+                performanceMessage.textContent = "好成績! 再加把勁就更好了!";
+            } else if (percentage >= 50) {
+                performanceMessage.textContent = "不錯的嘗試! 繼續練習!";
+            } else {
+                performanceMessage.textContent = "加油! 多練習就會進步!";
+            }
+        }
+
+        // 連接到 Microbit
+        async function connectToMicrobit() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                connectionStatus.textContent = "已連接";
+                connectionStatus.className = "text-sm text-green-600 dark:text-green-400";
+                connectButton.textContent = "已連接";
+                connectButton.disabled = true;
+                
+                startNewGame();
+                
+                // 開始讀取數據
+                readMicrobitData();
+            } catch (error) {
+                connectionStatus.textContent = "連接失敗: " + error.message;
+                connectionStatus.className = "text-sm text-red-600 dark:text-red-400";
+                console.error("連接錯誤:", error);
+            }
+        }
+
+        // 讀取 Microbit 數據
+        async function readMicrobitData() {
+            try {
+                reader = port.readable.getReader();
+                
+                const decoder = new TextDecoder();
+                let buffer = "";
+                
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        break;
+                    }
+                    
+                    buffer += decoder.decode(value);
+                    
+                    // 處理收到的數據
+                    const lines = buffer.split("\r\n");
+                    buffer = lines.pop() || ""; // 最後一個可能不完整，保留
+                    
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            processSignal(line.trim());
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("讀取錯誤:", error);
+                connectionStatus.textContent = "連接中斷: " + error.message;
+                connectionStatus.className = "text-sm text-red-600 dark:text-red-400";
+            } finally {
+                if (reader) {
+                    reader.releaseLock();
+                }
+            }
+        }
+
+        // 處理接收到的信號
+        function processSignal(signal) {
+            const validSignals = ["A", "B", "C", "D"];
+            if (!validSignals.includes(signal)) return;
+            
+            // 記錄信號
+            const timestamp = new Date().toLocaleTimeString();
+            const newSignal = document.createElement("div");
+            newSignal.textContent = `${timestamp}: 收到選項 ${signal}`;
+            signalLog.prepend(newSignal);
+            
+            // 限制日誌數量
+            while (signalLog.childNodes.length > 10) {
+                signalLog.removeChild(signalLog.lastChild);
+            }
+            
+            // 如果正在等待回答，處理這個答案
+            if (waitingForAnswer) {
+                lastReceivedSignal = signal;
+                
+                // 高亮選擇的選項
+                const optionElement = document.getElementById(`option-${signal.toLowerCase()}`);
+                optionElement.classList.add('answer-pulse');
+                
+                // 在短暫延遲後處理答案
+                setTimeout(() => {
+                    optionElement.classList.remove('answer-pulse');
+                    handleAnswer(signal);
+                }, 500);
+            }
+        }
+
+        // 事件監聽器
+        connectButton.addEventListener('click', connectToMicrobit);
+        
+        nextQuestionButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            displayQuestion(currentQuestionIndex);
+        });
+        
+        restartButton.addEventListener('click', startNewGame);
+        
+        // 鍵盤快捷鍵（用於測試，不需要 Microbit）
+        document.addEventListener('keydown', (event) => {
+            if (waitingForAnswer) {
+                const key = event.key.toUpperCase();
+                if (['A', 'B', 'C', 'D'].includes(key)) {
+                    processSignal(key);
+                }
+            }
+        });
+        
+        // 檢查 Web Serial API 支援
+        if (!('serial' in navigator)) {
+            connectionStatus.textContent = "您的瀏覽器不支援 Web Serial API，請使用 Chrome 或 Edge 瀏覽器";
+            connectionStatus.className = "text-sm text-red-600 dark:text-red-400";
+            connectButton.disabled = true;
+        }
+    </script>
+</body>
+</html>
