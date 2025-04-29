@@ -271,6 +271,65 @@
             display: inline-block;
             animation: encourage-wave 0.7s ease-in-out infinite;
         }
+
+        /* 計時器樣式 */
+        .timer {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .timer-warning {
+            color: #F97316 !important; /* 橙色 */
+        }
+
+        .timer-danger {
+            color: #EF4444 !important; /* 红色 */
+            animation: pulse 0.5s infinite;
+        }
+
+        /* 遊戲結束動畫 */
+        @keyframes slideIn {
+            0% { transform: translateY(-100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .game-over-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .game-over-panel {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body class="bg-orange-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
@@ -296,6 +355,25 @@
         <div class="encouragement-message">
             <div class="encouragement-icon">💪</div>
             <div>加油！再試一次！</div>
+        </div>
+    </div>
+    
+    <!-- 遊戲結束容器 (預設隱藏) -->
+    <div id="game-over-container" class="game-over-container hidden">
+        <div class="game-over-panel dark:bg-gray-800">
+            <h2 class="text-3xl font-bold mb-4 text-primary-dark dark:text-primary-light">遊戲結束!</h2>
+            <p class="text-xl mb-6">時間到！</p>
+            
+            <div class="flex flex-col items-center mb-6">
+                <div class="text-2xl mb-2">你的得分</div>
+                <div id="final-score" class="text-5xl font-bold text-primary-dark dark:text-primary-light mb-4">0</div>
+                <div id="score-message" class="text-lg italic">再接再厲！</div>
+            </div>
+            
+            <button id="restart-button" class="game-button bg-gradient-to-r from-primary-light to-primary px-6 py-3 text-white rounded-full shadow-md hover:shadow-lg flex items-center mx-auto">
+                <i class="fas fa-redo-alt mr-2"></i>
+                <span>再玩一次</span>
+            </button>
         </div>
     </div>
 
@@ -336,6 +414,14 @@
                             <i class="fas fa-play mr-2"></i>
                             <span>開始挑戰</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- 計時器 -->
+                <div id="timer-container" class="w-full flex justify-center mb-4 hidden">
+                    <div class="flex items-center bg-gray-100 dark:bg-gray-700 px-6 py-2 rounded-full">
+                        <i class="fas fa-hourglass-half text-yellow-500 text-2xl mr-3"></i>
+                        <div id="timer" class="text-3xl font-bold text-gray-700 dark:text-gray-300">60</div>
                     </div>
                 </div>
 
@@ -392,6 +478,9 @@
         </footer>
     </div>
 
+    <!-- 音效元素 -->
+    <audio id="countdown-audio" src="./audio/CountDown.mp3" preload="auto"></audio>
+
     <script>
         // 遊戲變數
         let port;
@@ -401,6 +490,9 @@
         let currentQuestion = null;
         let isGameRunning = false;
         let gameEnabled = false;
+        let timerInterval = null;
+        let timeLeft = 60; // 遊戲時間60秒
+        let countdownAudio = null;
 
         // DOM元素
         const connectButton = document.getElementById('connect-button');
@@ -416,6 +508,13 @@
         const feedbackText = document.getElementById('feedback-text');
         const celebrationContainer = document.getElementById('celebration-container');
         const encouragementContainer = document.getElementById('encouragement-container');
+        const timerContainer = document.getElementById('timer-container');
+        const timerDisplay = document.getElementById('timer');
+        const gameOverContainer = document.getElementById('game-over-container');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const scoreMessageDisplay = document.getElementById('score-message');
+        const restartButton = document.getElementById('restart-button');
+        const countdownAudioElement = document.getElementById('countdown-audio');
 
         // 連接到Microbit
         connectButton.addEventListener('click', async () => {
@@ -450,6 +549,88 @@
                 console.error('連接錯誤:', error);
                 showNotification(`連接錯誤: ${error.message}`, true);
             }
+        });
+
+        // 計時器功能
+        function startTimer() {
+            // 顯示計時器
+            timerContainer.classList.remove('hidden');
+            timeLeft = 60; // 重置時間
+            updateTimerDisplay();
+            
+            // 啟動計時器
+            clearInterval(timerInterval); // 清除舊計時器
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                // 當時間低於10秒時，添加警告樣式
+                if (timeLeft <= 10) {
+                    timerDisplay.classList.add('timer-danger');
+                } else if (timeLeft <= 20) {
+                    timerDisplay.classList.add('timer-warning');
+                    timerDisplay.classList.remove('timer-danger');
+                } else {
+                    timerDisplay.classList.remove('timer-warning', 'timer-danger');
+                }
+                
+                // 時間結束時
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // 更新計時器顯示
+        function updateTimerDisplay() {
+            timerDisplay.textContent = timeLeft;
+        }
+
+        // 結束遊戲
+        function endGame() {
+            // 停止計時器
+            clearInterval(timerInterval);
+            
+            // 停止音樂
+            if (countdownAudio) {
+                countdownAudio.pause();
+                countdownAudio.currentTime = 0;
+            }
+            
+            // 更新最終分數
+            finalScoreDisplay.textContent = score;
+            
+            // 設置最終分數訊息
+            if (score >= 20) {
+                scoreMessageDisplay.textContent = '太厲害了！你是數學天才！';
+            } else if (score >= 15) {
+                scoreMessageDisplay.textContent = '好棒！你的數學能力很強！';
+            } else if (score >= 10) {
+                scoreMessageDisplay.textContent = '做得好！繼續努力！';
+            } else if (score >= 5) {
+                scoreMessageDisplay.textContent = '加油！你可以做得更好！';
+            } else {
+                scoreMessageDisplay.textContent = '別灰心，繼續練習，你會進步的！';
+            }
+            
+            // 顯示遊戲結束畫面
+            gameOverContainer.classList.remove('hidden');
+            
+            // 停止遊戲
+            isGameRunning = false;
+        }
+
+        // 重新開始遊戲
+        restartButton.addEventListener('click', () => {
+            // 隱藏遊戲結束畫面
+            gameOverContainer.classList.add('hidden');
+            
+            // 重置分數
+            score = 0;
+            scoreDisplay.textContent = '0';
+            
+            // 啟動新遊戲
+            startGame();
         });
 
         // 顯示通知（僅在控制台）
@@ -488,7 +669,7 @@
         }
 
         // 開始遊戲
-        startButton.addEventListener('click', () => {
+        function startGame() {
             if (!gameEnabled && !confirm('你尚未連接獵狩裝置。要繼續嗎？')) {
                 return;
             }
@@ -497,7 +678,38 @@
             score = 0;
             scoreDisplay.textContent = '0';
             startButton.innerHTML = '<i class="fas fa-forward mr-2"></i><span>下一題</span>';
+            
+            // 播放音樂
+            try {
+                // 嘗試播放音樂
+                countdownAudio = new Audio('./audio/CountDown.mp3');
+                countdownAudio.play().catch(error => {
+                    console.error('無法播放音頻:', error);
+                    // 嘗試使用HTML audio元素
+                    countdownAudioElement.play().catch(err => {
+                        console.error('兩種方法都無法播放音頻:', err);
+                    });
+                });
+            } catch (error) {
+                console.error('播放音頻時發生錯誤:', error);
+            }
+            
+            // 啟動計時器
+            startTimer();
+            
+            // 生成第一個問題
             generateQuestion();
+        }
+
+        // 點擊開始按鈕
+        startButton.addEventListener('click', () => {
+            if (isGameRunning) {
+                // 如果遊戲已經在運行，則生成新問題
+                generateQuestion();
+            } else {
+                // 開始新遊戲
+                startGame();
+            }
         });
 
         // 慶祝動畫
@@ -1083,6 +1295,9 @@
         function generateQuestion() {
             // 隱藏之前的反饋
             feedback.className = 'hidden';
+            
+            // 如果遊戲已結束，不生成新問題
+            if (!isGameRunning) return;
             
             // 隨機選擇題型
             const questionTypeIndex = Math.floor(Math.random() * questionTypes.length);
