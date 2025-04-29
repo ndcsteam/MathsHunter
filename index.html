@@ -197,16 +197,24 @@
 
         // 讀取Microbit數據
         async function readData() {
-            inputDone = port.readable.pipeTo(new WritableStream({
-                write(data) {
-                    const value = new TextDecoder().decode(data).trim();
-                    if (value === 'A' || value === 'B' || value === 'C' || value === 'D') {
-                        processAnswer(value);
+            while (true) {
+                try {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        // 流已關閉
+                        break;
                     }
+                    // 將接收到的數據解碼為文本
+                    const valueString = new TextDecoder().decode(value).trim();
+                    // 處理接收到的選項
+                    if (valueString === 'A' || valueString === 'B' || valueString === 'C' || valueString === 'D') {
+                        processAnswer(valueString);
+                    }
+                } catch (error) {
+                    console.error('讀取錯誤:', error);
+                    break;
                 }
-            })).catch(error => {
-                console.error('讀取錯誤:', error);
-            });
+            }
         }
 
         // 更新連接狀態
